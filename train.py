@@ -9,6 +9,7 @@ import tensorflow as tf
 from text_cnn import TextCNN
 from tensorflow.contrib import learn
 from sklearn.model_selection import train_test_split
+import pickle
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -116,8 +117,10 @@ def train_cnn():
 					if dev_accuracy >= best_accuracy:
 						best_accuracy, best_at_step = dev_accuracy, current_step
 						path = saver.save(sess, checkpoint_prefix, global_step=current_step)
+						
 						logging.critical('Saved model {} at step {}'.format(path, best_at_step))
 						logging.critical('Best accuracy {} at step {}'.format(best_accuracy, best_at_step))
+
 
 			"""Step 7: predict x_test (batch by batch)"""
 			test_batches = data_helper.batch_iter(list(zip(x_test, y_test)), params['batch_size'], 1)

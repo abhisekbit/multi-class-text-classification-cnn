@@ -6,6 +6,7 @@ import data_helper
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import numpy as np
 from tensorflow.contrib import learn
 
 logging.getLogger().setLevel(logging.INFO)
@@ -30,19 +31,36 @@ def predict_unseen_data():
 	label_dict = dict(zip(labels, one_hot))
 
 	x_raw = [example['consumer_complaint_narrative'] for example in test_examples]
+	print(x_raw)
+	
+	#x_raw = [example['Resolution description'] for example in test_examples]
+
+	xx_raw = ['Im a YYYY who performed work as per agreed contract proposal, however the property was foreclosed, and sold in the middle of construction, the insurance company paid the mortgage company in full for the Accident Repair work to be performed, the mortgage company sent Conditional Waiver and Release of Lien for me to sign and send back. I was also instructed to await the agreed final payment and to cease all work, I did as directed. I sent it back XXXX XXXX, 2015 ; however I still have not been paid as promised ( stated on conditional lien release ) \n']
+	print(xx_raw)
+	
+
 	x_test = [data_helper.clean_str(x) for x in x_raw]
+
+	xx_test = [data_helper.clean_str(xx) for xx in xx_raw]
+	
+
 	logging.info('The number of x_test: {}'.format(len(x_test)))
 
 	y_test = None
 	if 'product' in test_examples[0]:
+	#if 'Action' in test_examples[0]:
+	
 		y_raw = [example['product'] for example in test_examples]
+		#y_raw = [example['Action'] for example in test_examples]
 		y_test = [label_dict[y] for y in y_raw]
 		logging.info('The number of y_test: {}'.format(len(y_test)))
 
 	vocab_path = os.path.join(checkpoint_dir, "vocab.pickle")
 	vocab_processor = learn.preprocessing.VocabularyProcessor.restore(vocab_path)
 	x_test = np.array(list(vocab_processor.transform(x_test)))
+	xx_test = np.array(list(vocab_processor.transform(xx_test)))
 
+	
 	"""Step 2: compute the predictions"""
 	graph = tf.Graph()
 	with graph.as_default():
@@ -53,21 +71,42 @@ def predict_unseen_data():
 			saver = tf.train.import_meta_graph("{}.meta".format(checkpoint_file))
 			saver.restore(sess, checkpoint_file)
 
+
+			
+
 			input_x = graph.get_operation_by_name("input_x").outputs[0]
 			dropout_keep_prob = graph.get_operation_by_name("dropout_keep_prob").outputs[0]
 			predictions = graph.get_operation_by_name("output/predictions").outputs[0]
 
 			batches = data_helper.batch_iter(list(x_test), params['batch_size'], 1, shuffle=False)
+			
 			all_predictions = []
+			
+			#Prediction of Serving Data
+
+			
+			Hello_Prediction = sess.run(predictions, {input_x: xx_test, dropout_keep_prob: 1.0})
+			print("HelloPrediction")
+			print(Hello_Prediction)
+
+
+
+			#-----------------------------------------------------------------------------------
+
 			for x_test_batch in batches:
 				batch_predictions = sess.run(predictions, {input_x: x_test_batch, dropout_keep_prob: 1.0})
+				print("batch_predictions")
+				print(batch_predictions)
 				all_predictions = np.concatenate([all_predictions, batch_predictions])
 
 	if y_test is not None:
 		y_test = np.argmax(y_test, axis=1)
+		print("Printing Result")
 		correct_predictions = sum(all_predictions == y_test)
 		logging.critical('The accuracy is: {}'.format(correct_predictions / float(len(y_test))))
 
 if __name__ == '__main__':
 	# python3 predict.py ./trained_model_1478649295/ ./data/small_samples.json
 	predict_unseen_data()
+
+
